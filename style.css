@@ -47,7 +47,7 @@ button{cursor:pointer}
 .top span{font-family:var(--pixel);font-size:11px;color:var(--sky-dark)}
 
 /* ---------- 프레임 ---------- */
-.wrap{max-width:980px;margin:0 auto 28px;padding:0 16px}
+.wrap{max-width:980px;margin:28px auto;padding:0 16px}
 .frame{
   position:relative;
   margin-right:76px;
