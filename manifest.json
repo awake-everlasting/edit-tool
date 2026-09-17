@@ -1,0 +1,14 @@
+{
+  "name": "하늘빛 사진첩",
+  "short_name": "사진첩",
+  "description": "사진 최대 4장을 이어 붙이고 자막을 넣어 PNG로 저장하는 콜라주 도구",
+  "lang": "ko",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#cfeafb",
+  "theme_color": "#5bb5e6",
+  "icons": [
+    { "src": "icons/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

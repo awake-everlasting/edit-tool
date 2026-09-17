@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>하늘빛 사진첩 · 콜라주 만들기</title>
+<link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#5bb5e6">
+<meta name="description" content="사진 최대 4장을 가로·세로로 이어 붙이고 자막을 넣어 PNG로 저장하는 콜라주 도구">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@400;700;800&family=Jua&family=Gaegu:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/galmuri@latest/dist/galmuri.css" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="top">
+  <h1>하늘빛 사진첩</h1>
+  <span>사진 4장으로 만드는 한 장</span>
+</header>
+
+<div class="wrap">
+  <main class="frame">
+    <nav class="tabs" aria-label="편집 메뉴">
+      <button class="tab" data-acc="layout" aria-expanded="false" aria-controls="acc-layout">배치</button>
+      <button class="tab" data-acc="text" aria-expanded="false" aria-controls="acc-text">글자</button>
+      <button class="tab save" id="saveBtn">저장</button>
+    </nav>
+
+    <div class="page">
+      <!-- 메인 사진 보이는 곳 -->
+      <div class="stage" id="stage">
+        <div class="canvas-wrap" id="canvasWrap">
+          <canvas id="canvas" aria-label="콜라주 편집 화면. + 칸을 누르면 사진 추가"></canvas>
+        </div>
+        <input type="file" id="fileInput" class="sr-only" accept="image/*" multiple tabindex="-1">
+      </div>
+
+      <!-- 설명글 -->
+      <ol class="guide">
+        <li>사진 위에서 스크롤 하면 확대/축소 돼요</li>
+        <li>사진을 드래그하면 위치를 옮길 수 있어요</li>
+        <li>+ 칸을 누르면 사진을 넣을 수 있어요 (최대 4장)</li>
+      </ol>
+
+      <!-- 배치 아코디언 -->
+      <section class="acc" id="acc-layout" aria-label="배치 설정">
+        <div class="acc-body">
+          <div class="acc-inner">
+            <h2 class="acc-title">배치</h2>
+            <div class="grid">
+              <div class="field">
+                <span class="field-label">방향</span>
+                <div class="seg" role="radiogroup" aria-label="방향">
+                  <label><input type="radio" name="layout" value="horizontal" checked><span>
+                    <svg class="ico" viewBox="0 0 26 12" aria-hidden="true"><rect x="0" y="0" width="7" height="12" fill="currentColor"/><rect x="9.5" y="0" width="7" height="12" fill="currentColor"/><rect x="19" y="0" width="7" height="12" fill="currentColor"/></svg>가로</span></label>
+                  <label><input type="radio" name="layout" value="vertical"><span>
+                    <svg class="ico" viewBox="0 0 26 12" aria-hidden="true"><rect x="6" y="0" width="14" height="3" fill="currentColor"/><rect x="6" y="4.5" width="14" height="3" fill="currentColor"/><rect x="6" y="9" width="14" height="3" fill="currentColor"/></svg>세로</span></label>
+                </div>
+              </div>
+              <div class="field">
+                <span class="field-label">칸 모양</span>
+                <div class="seg" role="radiogroup" aria-label="칸 모양">
+                  <label><input type="radio" name="ratio" value="1:1" checked><span>1:1</span></label>
+                  <label><input type="radio" name="ratio" value="4:5"><span>4:5</span></label>
+                  <label><input type="radio" name="ratio" value="16:9"><span>16:9</span></label>
+                </div>
+              </div>
+              <div class="field">
+                <label for="gap">여백 <span class="val" id="gapVal">16px</span></label>
+                <input type="range" id="gap" min="0" max="80" value="16">
+              </div>
+              <div class="field">
+                <span class="field-label">여백 색</span>
+                <div class="swatches" id="bgSwatches">
+                  <button class="sw" data-color="#ffffff" style="background:#ffffff" aria-label="흰색" aria-pressed="true"></button>
+                  <button class="sw" data-color="#dff1fc" style="background:#dff1fc" aria-label="연한 하늘색" aria-pressed="false"></button>
+                  <button class="sw" data-color="#5bb5e6" style="background:#5bb5e6" aria-label="하늘색" aria-pressed="false"></button>
+                  <button class="sw" data-color="#2f7fb5" style="background:#2f7fb5" aria-label="진한 파랑" aria-pressed="false"></button>
+                  <button class="sw" data-color="#222a30" style="background:#222a30" aria-label="검정" aria-pressed="false"></button>
+                  <input type="color" id="bgCustom" value="#ffffff" aria-label="여백 색 직접 고르기">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 글자 아코디언 -->
+      <section class="acc" id="acc-text" aria-label="글자 설정">
+        <div class="acc-body">
+          <div class="acc-inner" id="textInner">
+            <h2 class="acc-title">글자 · 자막</h2>
+            <div class="locked">
+              <span>글자는 가로 방향에서만 넣을 수 있어요.</span>
+              <button class="btn" id="toHorizontal">가로로 바꾸기</button>
+            </div>
+            <div class="grid">
+              <div class="field span2">
+                <label for="txtInput">글자 내용 <span class="val">사진 하단 가운데에 자막처럼 들어가요</span></label>
+                <textarea id="txtInput" placeholder="예) 2026년 가을, 바다 앞에서"></textarea>
+              </div>
+              <div class="field">
+                <label for="txtFont">글씨체</label>
+                <select id="txtFont">
+                  <option value="nanum">나눔고딕 (깔끔)</option>
+                  <option value="jua">주아 (동글동글)</option>
+                  <option value="gaegu">개구 (손글씨)</option>
+                  <option value="galmuri">갈무리 (픽셀)</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="txtSize">크기 <span class="val" id="sizeVal">48</span></label>
+                <input type="range" id="txtSize" min="20" max="120" value="48">
+              </div>
+              <div class="field span2">
+                <span class="field-label">글자 색</span>
+                <div class="swatches" id="txtSwatches">
+                  <button class="sw" data-color="#ffffff" style="background:#ffffff" aria-label="흰색" aria-pressed="true"></button>
+                  <button class="sw" data-color="#fff27a" style="background:#fff27a" aria-label="노랑" aria-pressed="false"></button>
+                  <button class="sw" data-color="#9fd4f3" style="background:#9fd4f3" aria-label="하늘색" aria-pressed="false"></button>
+                  <button class="sw" data-color="#2f7fb5" style="background:#2f7fb5" aria-label="파랑" aria-pressed="false"></button>
+                  <button class="sw" data-color="#222a30" style="background:#222a30" aria-label="검정" aria-pressed="false"></button>
+                  <input type="color" id="txtColor" value="#ffffff" aria-label="글자 색 직접 고르기">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<footer>사진은 서버로 올라가지 않고 내 기기 안에서만 처리돼요</footer>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="js/app.js" defer></script>
+</body>
+</html>
