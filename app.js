@@ -309,6 +309,13 @@
     fit();
   }
 
+  // 한 프레임에 한 번만 그려서 끊김 없이 보이게 합니다.
+  let rafId = 0;
+  function requestRender() {
+    if (rafId) return;
+    rafId = requestAnimationFrame(() => { rafId = 0; render(); });
+  }
+
   function fit() {
     if (!L) return;
     const aw = stage.clientWidth - 32;
@@ -329,7 +336,7 @@
       b.setAttribute('aria-label', `${i + 1}번째 사진 빼기`);
       b.style.left = ((cell.x + cell.w) / L.W * 100) + '%';
       b.style.top = (cell.y / L.H * 100) + '%';
-      b.addEventListener('click', () => { state.photos.splice(i, 1); refresh(); });
+      b.addEventListener('click', () => { stopZoomAnim(); state.photos.splice(i, 1); refresh(); });
       wrap.appendChild(b);
     });
   }
@@ -361,25 +368,57 @@
     photo.zoom = nz;
   }
 
+  // 휠 한 칸에 움직이는 양. 작을수록 더 세밀하게 조절됩니다.
+  const WHEEL_STEP = 0.0006;
+  const EASE = 0.22; // 목표 배율까지 따라가는 속도 (0~1)
+  let zoomAnim = null;
+
+  function stopZoomAnim() { zoomAnim = null; }
+
+  function animateZoom() {
+    if (!zoomAnim) return;
+    const photo = state.photos[zoomAnim.ci];
+    if (!photo) { zoomAnim = null; return; }
+    const ratio = zoomAnim.target / photo.zoom;
+    if (Math.abs(Math.log(ratio)) < 0.0015) {
+      zoomCell(zoomAnim.ci, zoomAnim.point, zoomAnim.target);
+      zoomAnim = null;
+      requestRender();
+      return;
+    }
+    zoomCell(zoomAnim.ci, zoomAnim.point, photo.zoom * Math.pow(ratio, EASE));
+    requestRender();
+    requestAnimationFrame(animateZoom);
+  }
+
   canvas.addEventListener('wheel', (e) => {
     const p = toCanvas(e);
     const ci = hitCell(p);
     const photo = state.photos[ci];
     if (!photo) return;
     e.preventDefault();
-    zoomCell(ci, p, photo.zoom * Math.exp(-e.deltaY * (e.deltaMode === 1 ? 0.05 : 0.0015)));
-    render();
+    let d = e.deltaY;
+    if (e.deltaMode === 1) d *= 16;        // 줄 단위로 오는 경우
+    else if (e.deltaMode === 2) d *= 400;  // 페이지 단위로 오는 경우
+    d = clamp(d, -120, 120);               // 한 번에 확 튀지 않도록
+    // 이미 움직이는 중이면 그 목표에 이어서 더합니다.
+    const base = zoomAnim && zoomAnim.ci === ci ? zoomAnim.target : photo.zoom;
+    const target = clamp(base * Math.exp(-d * WHEEL_STEP), 0.2, 8);
+    const running = !!zoomAnim;
+    zoomAnim = { ci, point: p, target };
+    if (!running) requestAnimationFrame(animateZoom);
   }, { passive: false });
 
   canvas.addEventListener('dblclick', (e) => {
     const photo = state.photos[hitCell(toCanvas(e))];
-    if (photo) { Object.assign(photo, { zoom: 1, ox: 0, oy: 0 }); render(); }
+    if (photo) { stopZoomAnim(); Object.assign(photo, { zoom: 1, ox: 0, oy: 0 }); requestRender(); }
   });
 
   const pointers = new Map();
   let gesture = null;
 
   canvas.addEventListener('pointerdown', (e) => {
+    stopZoomAnim();
     canvas.setPointerCapture(e.pointerId);
     const p = toCanvas(e);
     pointers.set(e.pointerId, p);
@@ -413,7 +452,7 @@
         canvas.style.cursor = 'grabbing';
         photo.ox += p.x - gesture.last.x;
         photo.oy += p.y - gesture.last.y;
-        render();
+        requestRender();
       }
       gesture.last = p;
     } else if (gesture.type === 'pinch' && pointers.size >= 2) {
@@ -424,7 +463,7 @@
       const photo = state.photos[g.ci];
       photo.ox += m.x - g.m0.x;
       photo.oy += m.y - g.m0.y;
-      render();
+      requestRender();
     }
   });
 
