@@ -5,7 +5,16 @@
   const $$ = (s) => [...document.querySelectorAll(s)];
 
   const MAX_PHOTOS = 4;
-  const CELL = { '1:1': [800, 800], '4:5': [800, 1000], '16:9': [800, 450] };
+  // 'wide'는 가로 방향에서 16:9, 세로 방향에서 9:16(세로가 긴 모양)으로 바뀝니다.
+  const CELL = {
+    '1:1': [800, 800],
+    '4:5': [800, 1000],
+    wide: { horizontal: [800, 450], vertical: [800, 1422] }
+  };
+  function cellSize() {
+    const c = CELL[state.ratio];
+    return Array.isArray(c) ? c : c[state.layout];
+  }
   const FONTS = {
     nanum: '"Nanum Gothic", sans-serif',
     jua: '"Jua", sans-serif',
@@ -109,9 +118,17 @@
   /* ---------- 배치 ---------- */
   $$('input[name=layout]').forEach((r) => r.addEventListener('change', () => {
     state.layout = r.value;
+    updateWideLabel();
+    if (state.ratio === 'wide') state.photos.forEach((p) => { p.ox = 0; p.oy = 0; });
     updateTextLock();
     refresh();
   }));
+
+  // 가로일 땐 16:9, 세로일 땐 9:16으로 이름을 바꿔 보여줍니다.
+  function updateWideLabel() {
+    const el = $('#wideLabel');
+    if (el) el.textContent = state.layout === 'vertical' ? '9:16' : '16:9';
+  }
   $$('input[name=ratio]').forEach((r) => r.addEventListener('change', () => {
     state.ratio = r.value;
     state.photos.forEach((p) => { p.ox = 0; p.oy = 0; });
@@ -156,6 +173,8 @@
   $('#toHorizontal').addEventListener('click', () => {
     $('input[name=layout][value=horizontal]').checked = true;
     state.layout = 'horizontal';
+    updateWideLabel();
+    if (state.ratio === 'wide') state.photos.forEach((p) => { p.ox = 0; p.oy = 0; });
     updateTextLock();
     refresh();
   });
@@ -165,7 +184,7 @@
   function getLayout(withGhost) {
     const n = state.photos.length;
     const slots = Math.max(1, n + (withGhost && n < MAX_PHOTOS ? 1 : 0));
-    const [cw, ch] = CELL[state.ratio];
+    const [cw, ch] = cellSize();
     const g = state.gap;
     const horiz = state.layout === 'horizontal';
     const W = horiz ? slots * cw + (slots + 1) * g : cw + 2 * g;
@@ -452,6 +471,7 @@
   });
 
   /* ---------- 시작 ---------- */
+  updateWideLabel();
   updateTextLock();
   refresh();
   if (document.fonts?.ready) document.fonts.ready.then(render);
