@@ -5,11 +5,11 @@
   const $$ = (s) => [...document.querySelectorAll(s)];
 
   const MAX_PHOTOS = 4;
-  // 'wide'는 가로 방향에서 16:9, 세로 방향에서 9:16(세로가 긴 모양)으로 바뀝니다.
+  // 'wide'는 가로 방향에서 9:16(세로가 긴 모양), 세로 방향에서 16:9로 바뀝니다.
   const CELL = {
     '1:1': [800, 800],
     '4:5': [800, 1000],
-    wide: { horizontal: [800, 450], vertical: [800, 1422] }
+    wide: { horizontal: [800, 1422], vertical: [800, 450] }
   };
   function cellSize() {
     const c = CELL[state.ratio];
@@ -124,10 +124,10 @@
     refresh();
   }));
 
-  // 가로일 땐 16:9, 세로일 땐 9:16으로 이름을 바꿔 보여줍니다.
+  // 가로일 땐 9:16, 세로일 땐 16:9로 이름을 바꿔 보여줍니다.
   function updateWideLabel() {
     const el = $('#wideLabel');
-    if (el) el.textContent = state.layout === 'vertical' ? '9:16' : '16:9';
+    if (el) el.textContent = state.layout === 'vertical' ? '16:9' : '9:16';
   }
   $$('input[name=ratio]').forEach((r) => r.addEventListener('change', () => {
     state.ratio = r.value;
@@ -270,7 +270,7 @@
   }
 
   function drawCaption(c, lay) {
-    const size = cap.size * (lay.ch / 800);
+    const size = cap.size * (Math.min(lay.cw, lay.ch) / 800);
     const lh = size * 1.3;
     c.save();
     c.font = `700 ${size}px ${FONTS[cap.font]}`;
